@@ -1,0 +1,100 @@
+﻿using ComparatorFileBranch.App.Definitions;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ComparatorFileBranch.App
+{
+    public class GitHelper
+    {
+        public string RepositoryPath { get; }
+        public string FileName { get; }
+
+        private Lazy<string> _TopLevelPath;
+
+        public GitHelper(string fileName)
+        {
+            RepositoryPath = Path.GetDirectoryName(fileName);
+            FileName = fileName;
+            _TopLevelPath = new Lazy<string>(() => RunGitCommand($"rev-parse --show-toplevel"));
+        }
+
+        public string RunGitCommand(string arguments)
+        {
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = arguments,
+                WorkingDirectory = RepositoryPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+            processInfo.EnvironmentVariables["LESSCHARSET"] = "utf-8";
+
+            using (var process = Process.Start(processInfo))
+            {
+                string output = process.StandardOutput.ReadToEnd();
+                string error = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0)
+                    throw new Exception($"Git error: {error}");
+
+                return output.Trim();
+            }
+        }
+
+        public string GetTopLevelPath()
+        {
+            return _TopLevelPath.Value;
+        }
+
+        public string GetContentFile(string branch)
+        {
+            string topLevelPath = GetTopLevelPath();
+            var fileName = FileName.Substring(topLevelPath.Length + 1).Replace("\\", "/");
+            var command = $"show {branch}:{fileName}";
+            string text = RunGitCommand(command);
+            return text;
+        }
+
+        public GitBranchInfo[] GetListBranch()
+        {
+            var listLocal = this.RunGitCommand("branch")?.Split('\n') ?? Array.Empty<string>();
+            var listRemote = this.RunGitCommand("branch -r")?.Split('\n') ?? Array.Empty<string>();
+            listRemote = listRemote.Length < 1
+                ? listRemote
+                : listRemote.Skip(1).ToArray();
+
+            List <GitBranchInfo> list = new List<GitBranchInfo>();
+            var listAllBranch = new string[][] { listLocal , listRemote };
+
+            foreach ( var listBranch in listAllBranch)
+            {
+                foreach (var branch in listBranch)
+                {
+                    var branchName = branch.Trim();
+                    var isCurrent = branchName.StartsWith('*');
+                    branchName = branchName.TrimStart('*').Trim();
+
+                    list.Add(new GitBranchInfo()
+                    {
+                        IsCurrent = isCurrent,
+                        Name = branchName,
+                        IsRemote = listBranch == listRemote
+                    });
+                }
+            }
+
+            return list.ToArray();
+        }
+    }
+}

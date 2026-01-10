@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ComparatorFileBranch.App": {
+      "commandName": "Project",
+      "commandLineArgs": "\"d:\\projects\\Wpf\\Jarvis.App\\Jarvis.App\\MainWindow.xaml.cs\""
+    }
+  }
+}
