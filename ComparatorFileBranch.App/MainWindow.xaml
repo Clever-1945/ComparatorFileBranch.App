@@ -28,6 +28,5 @@
             Grid.ColumnSpan="3"
             Panel.ZIndex="0" 
             />
-        
     </Grid>
 </Window>
