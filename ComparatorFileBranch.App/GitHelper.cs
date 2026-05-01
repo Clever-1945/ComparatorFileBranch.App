@@ -14,20 +14,40 @@ namespace ComparatorFileBranch.App
         public string RepositoryPath { get; }
         public string FileName { get; }
 
-        private Lazy<string> _TopLevelPath;
+        private string _topLevelPath;
 
         public GitHelper(string fileName)
         {
             RepositoryPath = Path.GetDirectoryName(fileName);
             FileName = fileName;
-            _TopLevelPath = new Lazy<string>(() => RunGitCommand($"rev-parse --show-toplevel"));
+            _topLevelPath = RunGitCommand($"rev-parse --show-toplevel");
         }
 
         public string GetLogText(string fileName)
         {
             var relativeFileName = GetRelativeFileName(fileName);
-            var text = RunGitCommand($"log --all {relativeFileName}");
+            var text = RunGitCommand($"log {relativeFileName}");
             return text;
+        }
+
+        public string GetShowCurrentText(string commit, string fileName)
+        {
+            var relativeFileName = GetRelativeFileName(fileName);
+            var text = RunGitCommand($"show {commit}:{relativeFileName}");
+            return text;
+        }
+
+        public string GetShowBeforeText(string commit, string fileName)
+        {
+            var relativeFileName = GetRelativeFileName(fileName);
+            var text = RunGitCommand($"show {commit}~1:{relativeFileName}");
+            return text;
+        }
+
+        public GitLogInfo[] GetLogs(string fileName)
+        {
+            var text = GetLogText(fileName);
+            return GitLogInfo.Parse(text).ToArray();
         }
 
         public string RunGitCommand(string arguments)
@@ -36,7 +56,7 @@ namespace ComparatorFileBranch.App
             {
                 FileName = "git",
                 Arguments = arguments,
-                WorkingDirectory = RepositoryPath,
+                WorkingDirectory = _topLevelPath ?? RepositoryPath,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -61,13 +81,13 @@ namespace ComparatorFileBranch.App
 
         public string GetTopLevelPath()
         {
-            return _TopLevelPath.Value;
+            return _topLevelPath;
         }
 
         public string GetRelativeFileName(string fullFileName)
         {
             string topLevelPath = GetTopLevelPath();
-            var fileName = FileName.Substring(topLevelPath.Length + 1).Replace("\\", "/");
+            var fileName = fullFileName.Substring(topLevelPath.Length + 1).Replace("\\", "/");
             return fileName;
         }
 
