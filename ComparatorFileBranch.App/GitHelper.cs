@@ -26,7 +26,7 @@ namespace ComparatorFileBranch.App
         public string GetLogText(string fileName)
         {
             var relativeFileName = GetRelativeFileName(fileName);
-            var text = RunGitCommand($"log {relativeFileName}");
+            var text = RunGitCommand($"log --all {relativeFileName}");
             return text;
         }
 
