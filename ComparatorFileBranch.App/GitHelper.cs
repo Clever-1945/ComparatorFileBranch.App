@@ -23,6 +23,13 @@ namespace ComparatorFileBranch.App
             _TopLevelPath = new Lazy<string>(() => RunGitCommand($"rev-parse --show-toplevel"));
         }
 
+        public string GetLogText(string fileName)
+        {
+            var relativeFileName = GetRelativeFileName(fileName);
+            var text = RunGitCommand($"log {relativeFileName}");
+            return text;
+        }
+
         public string RunGitCommand(string arguments)
         {
             var processInfo = new ProcessStartInfo
@@ -57,10 +64,16 @@ namespace ComparatorFileBranch.App
             return _TopLevelPath.Value;
         }
 
-        public string GetContentFile(string branch)
+        public string GetRelativeFileName(string fullFileName)
         {
             string topLevelPath = GetTopLevelPath();
             var fileName = FileName.Substring(topLevelPath.Length + 1).Replace("\\", "/");
+            return fileName;
+        }
+
+        public string GetContentFile(string branch)
+        {
+            var fileName = GetRelativeFileName(FileName);
             var command = $"show {branch}:{fileName}";
             string text = RunGitCommand(command);
             return text;
